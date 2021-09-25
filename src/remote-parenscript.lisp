@@ -123,16 +123,6 @@ runner for evaluation using JavaScript evaluator ENV."
         :wait ,wait
         :timeout ,timeout))
 
-(defun browse-temporary-html (html &key headless)
-  "Generate temporary HTML file and open it with chromium. Pass
---headless flag if HEADLESS is not nil."
-  (uiop:with-temporary-file (:pathname filepath :stream out :type "html" :keep t)
-    (write-string html out)
-    (sb-ext:run-program "chromium" (append (when headless (list "--headless" "--remote-debugging-port=9222"))
-                                           (list (namestring filepath)))
-                        :search t
-                        :wait nil)))
-
 (defvar *results-table* nil
   "For binding result hash table in MESSAGE-HANDLER.")
 
