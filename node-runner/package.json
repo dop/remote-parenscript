@@ -1,0 +1,12 @@
+{
+  "name": "node-runner",
+  "version": "1.0.0",
+  "description": "Evaluator for Remote-Parenscript.",
+  "main": "index.js",
+  "keywords": [],
+  "author": "Donatas Petrauskas",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.2.2"
+  }
+}

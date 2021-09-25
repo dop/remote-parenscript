@@ -3,7 +3,7 @@
   (:nicknames #:rps)
   (:local-nicknames (#:js #:remote-parenscript-utils)
                     (#:r #:remote-parenscript-runners))
-  (:export #:start #:stop #:ps #:ps* #:connected-p)
+  (:export #:start #:stop #:ps #:ps*)
   (:import-from #:alexandria #:with-gensyms)
   (:import-from #:anaphora #:it))
 
@@ -162,7 +162,7 @@ Etherwise JS-MESSAGE is simply logged."
     (error ()
       (log:info js-message))))
 
-(defun start (&key (runner (make-instance 'r:chromium)) (port (find-port:find-port)))
+(defun start (&key (runner (make-instance 'r:chromium)) (port (find-port:find-port)) wait)
   "Start Remote-JS server and optionally start evaluator process.
 
 Returns REMOTE-PARENSCRIPT-EVALUATOR object.
@@ -176,7 +176,11 @@ If RUNNER is given, starts it to connect to Remote-JS server."
                            (let ((*results-table* results))
                              (message-handler message))))))
     (remote-js:start ctx)
-    (r:start runner ctx)
+    (when runner
+      (r:start runner ctx)
+      (when wait
+        (loop until (remote-js:context-connected-p ctx)
+              do (sleep 0.2))))
     (setf *last-evaluator*
           (make-instance 'remote-parenscript-evaluator
                          :ctx ctx
@@ -189,6 +193,3 @@ If RUNNER is given, starts it to connect to Remote-JS server."
   (remote-js:stop (rps-ctx env))
   (when (rps-runner env)
     (r:stop (rps-runner env))))
-
-(defun connected-p (&optional (env *last-evaluator*))
-  (remote-js:context-connected-p (rps-ctx env)))

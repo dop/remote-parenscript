@@ -1,7 +1,7 @@
 (defpackage #:remote-parenscript-runners
   (:use #:cl)
   (:import-from #:alexandria #:appendf)
-  (:export #:runner #:start #:stop #:chromium))
+  (:export #:runner #:start #:stop #:chromium #:node))
 
 (in-package #:remote-parenscript-runners)
 
@@ -44,11 +44,21 @@
   (uiop:with-temporary-file (:pathname filepath :stream out :type "html" :keep t)
     (write-string (remote-js:html ctx) out)
     (setf (slot-value o 'html-filepath) filepath)
-    (call-next-method o ctx (append (when (slot-value o 'headless)
-                                      (list "--headless" "--remote-debugging-port=9222"))
-                                    more-args
-                                    (namestring filepath)))))
+    (apply #'call-next-method o ctx (append (when (slot-value o 'headless)
+                                              (list "--headless" "--remote-debugging-port=9222"))
+                                            more-args
+                                            (list (namestring filepath))))))
 
 (defmethod stop ((o chromium))
   (call-next-method)
   (uiop:delete-file-if-exists (slot-value o 'html-filepath)))
+
+(defclass node (runner)
+  ()
+  (:default-initargs :program "node"))
+
+(defmethod start ((o node) (ctx remote-js:context) &rest more-args)
+  (let ((script (merge-pathnames "node-runner" (asdf:system-source-directory "remote-parenscript"))))
+    (apply #'call-next-method o ctx (list* (namestring script)
+                                           "--port" (format nil "~D" (remote-js:context-port ctx))
+                                           more-args))))

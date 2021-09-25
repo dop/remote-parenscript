@@ -1,3 +1,16 @@
 #+TITLE: Remote Parenscript
 
 Wrapper around [[https://github.com/ceramic/remote-js][remote-js]] to execute [[https://common-lisp.net/project/parenscript/][Parenscript]] code.
+
+#+begin_example
+CL-USER> (rps:start)
+#<REMOTE-PARENSCRIPT::REMOTE-PARENSCRIPT-EVALUATOR {100654F673}>
+127.0.0.1 - [2021-09-25 21:51:29] "GET / HTTP/1.1" 101 0 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_5_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4328.0 Safari/537.36"
+CL-USER> (rps:ps () (+ 1 2 3))
+6
+CL-USER> (rps:ps () (loop for i from 0 to 100 sum i))
+5050
+CL-USER> (rps:stop)
+T
+[2021-09-25 21:52:12 [ERROR]] Error: end of file on #<SB-SYS:FD-STREAM for "socket 127.0.0.1:40000, peer: 127.0.0.1:60046" {10066D3F33}>
+#+end_example

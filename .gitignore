@@ -1,2 +1,4 @@
 .dir-locals.el
 *.fasl
+node_modules/
+package-lock.json
