@@ -1,0 +1,3 @@
+#+TITLE: Remote Parenscript
+
+Wrapper around [[https://github.com/ceramic/remote-js][remote-js]] to execute [[https://common-lisp.net/project/parenscript/][Parenscript]] code.
