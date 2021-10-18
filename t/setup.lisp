@@ -59,6 +59,7 @@ If symbol in TEMPLATE starts with underscore (_) it does not have to have the sa
     (ps-code-equal template code)))
 
 (defparameter *test-runners* nil)
+(defparameter *running-test-runners* nil)
 
 (defmacro define-runner-helper (name &rest instance-args)
   (let ((var (intern (format nil "*~A*" name)))
@@ -68,11 +69,12 @@ If symbol in TEMPLATE starts with underscore (_) it does not have to have the sa
         (with (intern (format nil "WITH-~A" name))))
     `(progn
        (defparameter ,var nil)
+       (push ',name *test-runners*)
 
        (defun ,start ()
          (unless ,var
            (push (setf ,var (rps:start :runner (make-instance ',instance ,@instance-args) :wait t))
-                 *test-runners*)))
+                 *running-test-runners*)))
 
        (defun ,stop ()
          (when ,var
@@ -88,6 +90,12 @@ If symbol in TEMPLATE starts with underscore (_) it does not have to have the sa
 (define-runner-helper node)
 
 (defun stop-test-runners ()
-  (mapc #'rps:stop *test-runners*))
+  (mapc #'rps:stop *running-test-runners*))
 
 (exit-hooks:add-exit-hook #'stop-test-runners)
+
+(defmacro def-rps-tests (name nil &body body)
+  `(progn
+     ,@(loop for var in *test-runners*
+             collect `(def-test ,(alexandria:symbolicate var "-" name) nil
+                        ,(list* (intern (format nil "WITH-~A" var)) nil body)))))
