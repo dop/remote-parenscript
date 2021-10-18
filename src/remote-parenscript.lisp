@@ -8,7 +8,8 @@
            #:*default-runner-type*
            #:remote-parenscript-evaluator
            #:html
-           #:js-embed)
+           #:js-embed
+           #:running-p)
   (:import-from #:alexandria #:with-gensyms)
   (:import-from #:anaphora #:it))
 
@@ -77,8 +78,23 @@ Atoms are wrapped in PROGN and strings in EVAL."
            (js::with-promise ,result 'then ,send 'catch ,send)
            (funcall ,send ,result)))))
 
-(defun wrap-code (code &key send-back handle-error)
+(defun make-defun-global (global expr)
+  "If EXPR is PS:DEFUN or CL:DEFUN put it in PROGN and prepend SETF
+expresion for setting window variable with same symbol name as defun."
+  (if (and (consp expr) (member (car expr) '(cl:defun ps:defun)))
+      `(progn
+         (setf (ps:@ ,global ,(second expr)) ,(second expr))
+         ,expr)
+      expr))
+
+(defun globalize (global code)
+  (with-it code
+    (mapcar (lambda (expr) (make-defun-global global expr)) it)
+    (if (= 1 (length it)) (first it) (cons 'progn it))))
+
+(defun wrap-code (code &key send-back handle-error global)
   (with-cond-it code
+    (global (globalize global it))
     (handle-error (wrap-in-error-handling it :log-error (not send-back)))
     (send-back (wrap-in-send-back send-back it))))
 
@@ -92,8 +108,10 @@ WAIT will block execution until result is received or TIMEOUT reached."
   (let ((id (incf (rps-result-id env))))
     (symbol-macrolet ((future-result (gethash id (rps-results env))))
       (setf future-result (lparallel:promise))
-      (with-it (wrap-code code :send-back (and send-back id)
-                               :handle-error handle-error)
+      (with-it code
+        (wrap-code it :send-back (and send-back id)
+                      :handle-error handle-error
+                      :global (r:global (rps-runner env)))
         (remote-js:eval (rps-ctx env) (ps:ps* it))
         (log:debug it))
       (cond ((and send-back wait)
@@ -103,32 +121,15 @@ WAIT will block execution until result is received or TIMEOUT reached."
                   (unless (lparallel:fulfilledp future-result)
                     (lparallel:fulfill future-result :timeout))))
              (lparallel:force future-result))
-	    (wait
-	     (log:warn "Cannot wait because" send-back))
-	    (t
-	     future-result)))))
-
-(defun make-defun-global (expr)
-  "If EXPR is PS:DEFUN or CL:DEFUN put it in PROGN and prepend SETF
-expresion for setting window variable with same symbol name as defun."
-  (if (and (consp expr) (member (car expr) '(cl:defun ps:defun)))
-      `(progn
-         (setf (ps:@ window ,(second expr)) ,(second expr))
-         ,expr)
-      expr))
+            (wait
+             (log:warn "Cannot wait because" send-back))
+            (t
+             future-result)))))
 
 (defmacro ps ((&key (env *last-evaluator*) (handle-error t) (send-back t) (wait t) (timeout 3.0)) &body body)
   "Compiles BODY using Parenscript if it is not a string and sends to
 runner for evaluation using JavaScript evaluator ENV."
-  `(ps* ',(let ((code (mapcar #'make-defun-global body)))
-            (if (= 1 (length code))
-                (first code)
-                (cons 'progn code)))
-        :env ,env
-        :handle-error ,handle-error
-        :send-back ,send-back
-        :wait ,wait
-        :timeout ,timeout))
+  `(ps* ',body :env ,env :handle-error ,handle-error :send-back ,send-back :wait ,wait :timeout ,timeout))
 
 (defvar *results-table* nil
   "For binding result hash table in MESSAGE-HANDLER.")
@@ -159,7 +160,11 @@ Etherwise JS-MESSAGE is simply logged."
     (error ()
       (log:info js-message))))
 
-(defun start (&key (runner (make-instance *default-runner-type*)) (port (find-port:find-port)) wait)
+(defun start (&key
+                (runner (make-instance *default-runner-type*))
+                (address trivial-ws:+default-address+)
+                (port (find-port:find-port :interface address))
+                wait)
   "Start Remote-JS server and optionally start evaluator process.
 
 Returns REMOTE-PARENSCRIPT-EVALUATOR object.
@@ -168,6 +173,7 @@ If RUNNER is given, starts it to connect to Remote-JS server."
   (let* ((results (make-hash-table))
          (ctx (remote-js:make-buffered-context
                :port port
+               :address address
                :timeout 10000
                :callback (lambda (message)
                            (let ((*results-table* results))
@@ -198,3 +204,7 @@ If RUNNER is given, starts it to connect to Remote-JS server."
 (defun js-embed (&optional (env *last-evaluator*))
   (declare (type remote-parenscript-evaluator env))
   (remote-js:js (rps-ctx env)))
+
+(defun running-p (&optional (env *last-evaluator*))
+  (declare (type remote-parenscript-evaluator env))
+  (remote-js:context-running-p (rps-ctx env)))

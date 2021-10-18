@@ -19,7 +19,7 @@
   :in-order-to ((test-op (test-op :remote-parenscript/tests))))
 
 (defsystem #:remote-parenscript/tests
-  :depends-on (#:remote-parenscript #:fiveam #:trivia)
+  :depends-on (#:remote-parenscript #:fiveam #:trivia #:exit-hooks)
   :pathname "t"
   :serial t
   :components ((:file "setup")

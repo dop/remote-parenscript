@@ -1,7 +1,7 @@
 (defpackage #:remote-parenscript-runners
   (:use #:cl)
   (:import-from #:alexandria #:appendf)
-  (:export #:runner #:start #:stop #:chromium #:node))
+  (:export #:runner #:start #:stop #:chromium #:node #:global))
 
 (in-package #:remote-parenscript-runners)
 
@@ -14,7 +14,12 @@
     :initform nil
     :initarg :arguments)
    (process
-    :accessor runner-process)))
+    :accessor runner-process)
+   (global
+    :type symbol
+    :initform 'window
+    :initarg :global
+    :accessor global)))
 
 (defgeneric start (o ctx &rest args))
 
@@ -55,7 +60,7 @@
 
 (defclass node (runner)
   ()
-  (:default-initargs :program "node"))
+  (:default-initargs :program "node" :global 'global))
 
 (defmethod start ((o node) (ctx remote-js:context) &rest more-args)
   (let ((script (merge-pathnames "node-runner" (asdf:system-source-directory "remote-parenscript"))))

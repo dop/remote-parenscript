@@ -58,3 +58,36 @@ If symbol in TEMPLATE starts with underscore (_) it does not have to have the sa
   (let ((*ps-placeholder-map* nil))
     (ps-code-equal template code)))
 
+(defparameter *test-runners* nil)
+
+(defmacro define-runner-helper (name &rest instance-args)
+  (let ((var (intern (format nil "*~A*" name)))
+        (instance (find-symbol (symbol-name name) "REMOTE-PARENSCRIPT-RUNNERS"))
+        (start (intern (format nil "START-~A" name)))
+        (stop (intern (format nil "STOP-~A" name)))
+        (with (intern (format nil "WITH-~A" name))))
+    `(progn
+       (defparameter ,var nil)
+
+       (defun ,start ()
+         (unless ,var
+           (push (setf ,var (rps:start :runner (make-instance ',instance ,@instance-args) :wait t))
+                 *test-runners*)))
+
+       (defun ,stop ()
+         (when ,var
+           (rps:stop ,var)))
+
+       (defmacro ,with (nil &body body)
+         `(progn
+            (,',start)
+            (let ((*rps* ,',var))
+              ,@body))))))
+
+(define-runner-helper chromium :headless t)
+(define-runner-helper node)
+
+(defun stop-test-runners ()
+  (mapc #'rps:stop *test-runners*))
+
+(exit-hooks:add-exit-hook #'stop-test-runners)
