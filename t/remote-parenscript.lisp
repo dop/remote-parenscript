@@ -8,7 +8,7 @@
   "Convenience wrapper to compile and execute Parenscript code in *RPS* evaluator."
   `(rps:ps (:env *rps*) ,@body))
 
-(def-rps-tests construct-array ()
+(def-universal-test construct-array ()
   (is (equal '(1 2 3 4 5)
              (rps (labels ((fill (arr x)
                              (funcall (ps:@ arr fill) x))

@@ -94,7 +94,7 @@ If symbol in TEMPLATE starts with underscore (_) it does not have to have the sa
 
 (exit-hooks:add-exit-hook #'stop-test-runners)
 
-(defmacro def-rps-tests (name nil &body body)
+(defmacro def-universal-test (name nil &body body)
   `(progn
      ,@(loop for var in *test-runners*
              collect `(def-test ,(alexandria:symbolicate var "-" name) nil
