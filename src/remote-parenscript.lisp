@@ -3,11 +3,18 @@
   (:nicknames #:rps)
   (:local-nicknames (#:js #:remote-parenscript-utils)
                     (#:r #:remote-parenscript-runners))
-  (:export #:start #:stop #:ps #:ps*)
+  (:export #:start #:stop
+           #:ps #:ps*
+           #:*default-runner-type*
+           #:remote-parenscript-evaluator
+           #:html
+           #:js-embed)
   (:import-from #:alexandria #:with-gensyms)
   (:import-from #:anaphora #:it))
 
 (in-package #:remote-parenscript)
+
+(defvar *default-runner-type* 'r:chromium)
 
 (defparameter *last-evaluator* nil
   "Convenience parameter to save last evaluator object so that ENV parameter can be skipped when calling STOP, PS* functions or PS macro.")
@@ -152,7 +159,7 @@ Etherwise JS-MESSAGE is simply logged."
     (error ()
       (log:info js-message))))
 
-(defun start (&key (runner (make-instance 'r:chromium)) (port (find-port:find-port)) wait)
+(defun start (&key (runner (make-instance *default-runner-type*)) (port (find-port:find-port)) wait)
   "Start Remote-JS server and optionally start evaluator process.
 
 Returns REMOTE-PARENSCRIPT-EVALUATOR object.
@@ -183,3 +190,11 @@ If RUNNER is given, starts it to connect to Remote-JS server."
   (remote-js:stop (rps-ctx env))
   (when (rps-runner env)
     (r:stop (rps-runner env))))
+
+(defun html (&optional (env *last-evaluator*))
+  (declare (type remote-parenscript-evaluator env))
+  (remote-js:html (rps-ctx env)))
+
+(defun js-embed (&optional (env *last-evaluator*))
+  (declare (type remote-parenscript-evaluator env))
+  (remote-js:js (rps-ctx env)))
