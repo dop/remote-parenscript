@@ -18,8 +18,10 @@
    (global
     :type symbol
     :initform 'window
-    :initarg :global
-    :accessor global)))
+    :initarg :global)))
+
+(defun global (runner)
+  (if runner (slot-value runner 'global) 'ps-window-wd-symbols:window))
 
 (defgeneric start (o ctx &rest args))
 
